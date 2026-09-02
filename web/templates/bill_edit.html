@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% set back = "/bills/" ~ b.id %}
+{% block title %}Edit {{ b.bill_number }}{% endblock %}
+{% block heading %}Edit {{ b.bill_number }}{% endblock %}
+{% block content %}
+<form method="post" action="/bills/{{ b.id }}/edit">
+  <div class="card">
+    <h3>Customer</h3>
+    <div class="field">
+      <select name="customer_id" required>
+        {% for c in customers %}
+        <option value="{{ c['id'] }}" {{ 'selected' if c['id']==b.customer_id }}>{{ c['name'] }} — {{ c['phone'] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <label>Site address</label>
+      <textarea name="bill_address" rows="2">{{ b.bill_address or '' }}</textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Items</h3>
+    <div id="items"></div>
+    <button type="button" class="btn ghost sm" onclick="addItem()">+ Add Item</button>
+  </div>
+
+  <div class="card">
+    <h3>Charges</h3>
+    <div class="grid2">
+      <div class="field"><label>Discount (&#8377;)</label>
+        <input type="number" step="0.01" min="0" name="discount" id="discount" value="{{ b.discount_amount or 0 }}" inputmode="decimal"></div>
+      <div class="field"><label>GST (%)</label>
+        <input type="number" step="0.01" min="0" max="100" name="tax_percent" id="tax" value="{{ b.tax_percent or 0 }}" inputmode="decimal"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Advance (&#8377;)</label>
+        <input type="number" step="0.01" min="0" name="advance" id="advance" value="{{ b.advance_paid or 0 }}" inputmode="decimal"></div>
+      <div class="field"><label>Mode</label>
+        <select name="payment_mode">{% for m in modes %}<option {{ 'selected' if m==b.payment_mode }}>{{ m }}</option>{% endfor %}</select></div>
+    </div>
+  </div>
+
+  <div class="totals">
+    <div class="tline"><span class="m">Subtotal</span><span id="t_sub">&#8377;0.00</span></div>
+    <div class="tline big"><span>TOTAL</span><span id="t_total">&#8377;0.00</span></div>
+    <div class="tline"><span class="m">Balance due</span><span id="t_due">&#8377;0.00</span></div>
+    <div id="warn"></div>
+  </div>
+
+  <div class="sticky-actions"><button class="btn green" id="submitBtn">Save &amp; Regenerate PDF</button></div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SERVICES = [{% for s in services %}{name:{{ s['service_name']|tojson }}, price:{{ s['default_price']|float }}},{% endfor %}];
+const EXISTING = [{% for it in items %}{n:{{ it['service_name']|tojson }}, q:{{ it['qty']|float }}, r:{{ it['rate']|float }}},{% endfor %}];
+const money = n => '\u20B9' + (Math.round(n*100)/100).toFixed(2);
+
+function addItem(name='', qty=1, rate=''){
+  const d = document.createElement('div');
+  d.className='item';
+  d.innerHTML = `
+    <div class="top">
+      <span class="sr"></span>
+      <div class="sugbox grow"><input class="sname" name="service_name" placeholder="Service" autocomplete="off" value="${name}"></div>
+      <button type="button" class="del" onclick="this.closest('.item').remove();renumber();calc()">&#10005;</button>
+    </div>
+    <div class="grid2">
+      <div><label>Qty</label><input class="qty" name="qty" type="number" step="0.01" min="0.01" value="${qty}" inputmode="decimal"></div>
+      <div><label>Rate</label><input class="rate" name="rate" type="number" step="0.01" min="0" value="${rate}" inputmode="decimal"></div>
+    </div>
+    <div class="amt">&#8377;0.00</div>`;
+  document.getElementById('items').appendChild(d);
+  const sn=d.querySelector('.sname');
+  sn.addEventListener('input',()=>suggest(sn));
+  sn.addEventListener('blur',()=>setTimeout(()=>hideSugs(sn),180));
+  d.querySelectorAll('.qty,.rate').forEach(i=>i.addEventListener('input',calc));
+  renumber(); calc();
+}
+function renumber(){document.querySelectorAll('#items .item').forEach((el,i)=>el.querySelector('.sr').textContent=i+1);}
+function suggest(input){
+  hideSugs(input);
+  const q=input.value.trim().toLowerCase(); if(!q) return;
+  const hits=SERVICES.filter(s=>s.name.toLowerCase().includes(q)).slice(0,6); if(!hits.length) return;
+  const box=document.createElement('div'); box.className='sugs';
+  hits.forEach(s=>{const o=document.createElement('div');
+    o.textContent=s.name+'  \u2014  \u20B9'+s.price.toFixed(2);
+    o.onmousedown=o.ontouchstart=ev=>{ev.preventDefault();input.value=s.name;
+      const r=input.closest('.item').querySelector('.rate');
+      if(!r.value||parseFloat(r.value)===0) r.value=s.price; hideSugs(input); calc();};
+    box.appendChild(o);});
+  input.parentElement.appendChild(box);
+}
+function hideSugs(i){const b=i.parentElement.querySelector('.sugs'); if(b) b.remove();}
+function calc(){
+  let sub=0;
+  document.querySelectorAll('#items .item').forEach(el=>{
+    const q=parseFloat(el.querySelector('.qty').value)||0, r=parseFloat(el.querySelector('.rate').value)||0;
+    sub+=q*r; el.querySelector('.amt').textContent=money(q*r);});
+  const disc=parseFloat(document.getElementById('discount').value)||0;
+  const gst=parseFloat(document.getElementById('tax').value)||0;
+  const adv=parseFloat(document.getElementById('advance').value)||0;
+  const taxable=Math.max(0,sub-disc), total=taxable+taxable*gst/100;
+  document.getElementById('t_sub').textContent=money(sub);
+  document.getElementById('t_total').textContent=money(total);
+  document.getElementById('t_due').textContent=money(total-adv);
+  const w=[];
+  if(disc>sub) w.push('Discount cannot exceed subtotal.');
+  if(adv>total+0.001) w.push('Advance cannot exceed total.');
+  document.getElementById('warn').innerHTML=w.length?'<div class="alert e" style="margin:10px 0 0">'+w.join('<br>')+'</div>':'';
+  document.getElementById('submitBtn').disabled=w.length>0;
+  document.getElementById('submitBtn').style.opacity=w.length?.5:1;
+}
+['discount','tax','advance'].forEach(id=>document.getElementById(id).addEventListener('input',calc));
+EXISTING.forEach(it=>addItem(it.n,it.q,it.r));
+if(!EXISTING.length) addItem();
+</script>
+{% endblock %}

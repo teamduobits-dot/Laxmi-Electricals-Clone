@@ -1,0 +1,158 @@
+/* Laxmi Electricals — Mobile Web
+   Mobile-first, thumb-friendly. Colors mirror ui/theme.py from the desktop app. */
+:root{
+  --primary:#1D4ED8; --primary-hov:#1E40AF; --primary-soft:#EFF6FF;
+  --success:#16A34A; --success-soft:#DCFCE7;
+  --warn:#F97316;   --warn-soft:#FFF7ED;
+  --danger:#DC2626; --danger-soft:#FEE2E2;
+  --bg:#F1F5F9; --card:#FFFFFF; --text:#0F172A; --muted:#64748B; --line:#E2E8F0;
+  --radius:14px; --shadow:0 1px 3px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.04);
+  --tabbar:64px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:15px;line-height:1.45;
+  padding-bottom:calc(var(--tabbar) + env(safe-area-inset-bottom));
+}
+a{color:var(--primary);text-decoration:none}
+
+/* ---------- App bar ---------- */
+.appbar{
+  position:sticky;top:0;z-index:50;background:var(--primary);color:#fff;
+  padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
+  display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);
+}
+.appbar h1{font-size:17px;margin:0;font-weight:700;flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.appbar .back{color:#fff;font-size:22px;line-height:1;padding:4px 6px;margin-left:-6px}
+.appbar .act{color:#fff;font-size:13px;font-weight:600;background:rgba(255,255,255,.18);
+  padding:7px 12px;border-radius:20px}
+
+.wrap{padding:14px;max-width:760px;margin:0 auto}
+
+/* ---------- Cards ---------- */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:14px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.04em}
+
+/* ---------- Stat grid ---------- */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.stat .lbl{font-size:12px;color:var(--muted);font-weight:600}
+.stat .val{font-size:20px;font-weight:800;margin-top:4px;letter-spacing:-.02em}
+.stat.g .val{color:var(--success)} .stat.b .val{color:var(--primary)}
+.stat.o .val{color:var(--warn)}    .stat.r .val{color:var(--danger)}
+
+/* ---------- Lists ---------- */
+.list{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.row .grow{flex:1;min-width:0}
+.row .t{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .s{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .amt{font-weight:800;text-align:right;white-space:nowrap}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--primary-soft);color:var(--primary);
+  display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+
+/* ---------- Badges ---------- */
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+.badge.paid{background:var(--success-soft);color:#15803D}
+.badge.due{background:var(--danger-soft);color:#B91C1C}
+.badge.partial{background:var(--warn-soft);color:#C2410C}
+
+/* ---------- Forms (44px+ touch targets, 16px font stops iOS zoom) ---------- */
+label{display:block;font-size:12.5px;font-weight:650;color:var(--muted);margin:0 0 5px}
+input,select,textarea{
+  width:100%;padding:12px 13px;font-size:16px;border:1.5px solid var(--line);
+  border-radius:10px;background:#fff;color:var(--text);font-family:inherit;min-height:46px
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary)}
+input.err{border-color:var(--danger);background:var(--danger-soft)}
+.field{margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:13px 18px;border:none;border-radius:11px;font-size:15px;font-weight:700;
+  background:var(--primary);color:#fff;cursor:pointer;min-height:48px;width:100%;
+  font-family:inherit}
+.btn:active{transform:scale(.985)}
+.btn.green{background:var(--success)} .btn.red{background:var(--danger)}
+.btn.ghost{background:#fff;color:var(--text);border:1.5px solid var(--line)}
+.btn.sm{padding:9px 13px;min-height:40px;font-size:13.5px;width:auto}
+.btnrow{display:flex;gap:8px}
+.btnrow .btn{flex:1}
+
+/* ---------- Item rows on the billing screen ---------- */
+.item{background:#F8FAFC;border:1.5px solid var(--line);border-radius:12px;padding:11px;margin-bottom:10px}
+.item .top{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.item .sr{width:26px;height:26px;border-radius:7px;background:var(--primary);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex:none}
+.item .del{background:var(--danger-soft);color:#991B1B;border:none;border-radius:8px;
+  width:34px;height:34px;font-size:16px;font-weight:700;flex:none;cursor:pointer}
+.item .amt{text-align:right;font-weight:800;font-size:14px;margin-top:7px;color:var(--primary)}
+
+/* ---------- Totals panel ---------- */
+.totals{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);margin-bottom:12px}
+.tline{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
+.tline.big{border-top:2px solid var(--line);margin-top:7px;padding-top:11px;
+  font-size:19px;font-weight:800;color:var(--primary)}
+.tline .m{color:var(--muted)}
+
+/* ---------- Bottom tab bar ---------- */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;background:#fff;
+  border-top:1px solid var(--line);display:flex;
+  padding-bottom:env(safe-area-inset-bottom);
+  box-shadow:0 -1px 4px rgba(15,23,42,.05)
+}
+.tabbar a{flex:1;padding:9px 2px 8px;text-align:center;color:var(--muted);font-size:10.5px;font-weight:650}
+.tabbar a .ic{display:block;font-size:20px;line-height:1.15;margin-bottom:2px}
+.tabbar a.on{color:var(--primary)}
+.fabwrap{position:relative}
+.tabbar a.fab .ic{
+  background:var(--primary);color:#fff;width:46px;height:46px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;margin:-16px auto 2px;
+  box-shadow:0 4px 12px rgba(29,78,216,.4);font-size:26px
+}
+.tabbar a.fab{color:var(--primary)}
+
+/* ---------- Alerts ---------- */
+.alert{padding:12px 14px;border-radius:11px;margin-bottom:12px;font-size:14px;font-weight:600}
+.alert.e{background:var(--danger-soft);color:#991B1B}
+.alert.s{background:var(--success-soft);color:#15803D}
+.alert.i{background:var(--primary-soft);color:#1E40AF}
+
+.empty{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty .ic{font-size:44px;opacity:.4;display:block;margin-bottom:10px}
+.search{margin-bottom:12px}
+.sticky-actions{position:sticky;bottom:calc(var(--tabbar) + 8px);z-index:20}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.chip{background:var(--primary-soft);color:var(--primary);border:none;padding:8px 13px;
+  border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.muted{color:var(--muted);font-size:12.5px}
+.right{text-align:right}
+.hidden{display:none!important}
+
+/* ---------- Modal ---------- */
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:100;
+  display:flex;align-items:flex-end;justify-content:center}
+.modal .box{background:#fff;width:100%;max-width:520px;
+  border-radius:18px 18px 0 0;padding:18px;
+  padding-bottom:calc(18px + env(safe-area-inset-bottom));
+  max-height:88vh;overflow:auto}
+.modal h3{margin:0 0 14px;font-size:17px;color:var(--text);text-transform:none;letter-spacing:0}
+@media(min-width:640px){ .modal{align-items:center} .modal .box{border-radius:18px} }
+
+/* Autocomplete suggestions */
+.sugbox{position:relative}
+.sugs{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--line);
+  border-radius:10px;box-shadow:0 6px 18px rgba(15,23,42,.14);max-height:190px;overflow:auto;z-index:40}
+.sugs div{padding:11px 13px;border-bottom:1px solid var(--line);font-size:14.5px}
+.sugs div:last-child{border-bottom:none}
+.sugs div:active{background:var(--primary-soft)}

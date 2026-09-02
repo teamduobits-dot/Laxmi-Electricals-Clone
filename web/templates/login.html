@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block appbar %}<h1>Laxmi Electricals</h1>{% endblock %}
+{% block content %}
+<div style="text-align:center;padding:26px 0 18px">
+  <div style="font-size:52px">&#9889;</div>
+  <div style="font-weight:800;font-size:21px;margin-top:6px">Laxmi Electricals</div>
+  <div class="muted">Billing &mdash; Mobile Edition</div>
+</div>
+<div class="card">
+  {% if first_run %}
+    <div class="alert i">Welcome! Set an admin password to secure the app.</div>
+  {% endif %}
+  <form method="post" action="/login">
+    <div class="field">
+      <label>{{ 'Create password' if first_run else 'Password' }}</label>
+      <input type="password" name="password" required autofocus autocomplete="{{ 'new-password' if first_run else 'current-password' }}">
+    </div>
+    {% if first_run %}
+    <div class="field">
+      <label>Confirm password</label>
+      <input type="password" name="confirm" required autocomplete="new-password">
+    </div>
+    {% endif %}
+    <button class="btn">{{ 'Create & Continue' if first_run else 'Login' }}</button>
+  </form>
+</div>
+{% endblock %}

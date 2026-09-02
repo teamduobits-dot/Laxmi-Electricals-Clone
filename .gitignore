@@ -1,0 +1,4 @@
+
+# ---------- Web edition ----------
+web/__pycache__/
+.venv/

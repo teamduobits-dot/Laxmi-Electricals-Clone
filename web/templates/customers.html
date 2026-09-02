@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% set back = "/more" %}
+{% block title %}Customers{% endblock %}
+{% block heading %}Customers{% endblock %}
+{% block appbar_action %}<a class="act" href="#" onclick="openForm();return false">+ Add</a>{% endblock %}
+{% block content %}
+<form class="search" method="get" action="/customers">
+  <input name="q" value="{{ q }}" placeholder="Search name, phone or address" autocomplete="off">
+</form>
+{% if customers %}
+<div class="list">
+  {% for c in customers %}
+  <div class="row">
+    <div class="avatar">{{ (c['name'] or '?')[0]|upper }}</div>
+    <div class="grow" onclick="openForm({{ c['id'] }},{{ c['name']|tojson }},{{ (c['phone'] or '')|tojson }},{{ (c['address'] or '')|tojson }})">
+      <div class="t">{{ c['name'] }}</div>
+      <div class="s">{{ c['phone'] }} &middot; {{ c['bill_count'] }} bills
+        {% if c['total_due'] and c['total_due'] > 0 %}&middot; <span style="color:var(--danger)">due {{ money(c['total_due']) }}</span>{% endif %}
+      </div>
+    </div>
+    <a class="btn sm" href="/billing?customer_id={{ c['id'] }}" style="text-decoration:none">Bill</a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}<div class="empty"><span class="ic">&#128100;</span>No customers yet</div>{% endif %}
+
+<div class="modal hidden" id="cf">
+  <div class="box">
+    <h3 id="cf_title">New Customer</h3>
+    <form method="post" action="/customers">
+      <input type="hidden" name="id" id="cf_id">
+      <div class="field"><label>Name *</label><input name="name" id="cf_name" required></div>
+      <div class="field"><label>Phone (10 digits) *</label>
+        <input name="phone" id="cf_phone" type="tel" inputmode="numeric" maxlength="10" required></div>
+      <div class="field"><label>Address</label><textarea name="address" id="cf_addr" rows="2"></textarea></div>
+      <div class="btnrow">
+        <button type="button" class="btn ghost" onclick="closeForm()">Cancel</button>
+        <button class="btn">Save</button>
+      </div>
+    </form>
+    <form method="post" id="cf_del" style="margin-top:9px" onsubmit="return confirm('Delete this customer?')">
+      <button class="btn red">Delete</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function openForm(id,name,phone,addr){
+  document.getElementById('cf').classList.remove('hidden');
+  document.getElementById('cf_title').textContent = id ? 'Edit Customer' : 'New Customer';
+  document.getElementById('cf_id').value    = id || '';
+  document.getElementById('cf_name').value  = name || '';
+  document.getElementById('cf_phone').value = phone || '';
+  document.getElementById('cf_addr').value  = addr || '';
+  const del = document.getElementById('cf_del');
+  if(id){ del.action = '/customers/'+id+'/delete'; del.classList.remove('hidden'); }
+  else  { del.classList.add('hidden'); }
+}
+function closeForm(){ document.getElementById('cf').classList.add('hidden'); }
+</script>
+{% endblock %}

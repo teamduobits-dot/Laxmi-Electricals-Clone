@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Dues{% endblock %}
+{% block heading %}Pending Dues{% endblock %}
+{% block content %}
+{% if request.query_params.get('collected') %}<div class="alert s">&#10003; Payment recorded &amp; PDF updated.</div>{% endif %}
+{% if request.query_params.get('err') %}<div class="alert e">{{ request.query_params.get('err') }}</div>{% endif %}
+
+<div class="stat r" style="margin-bottom:12px">
+  <div class="lbl">Total Outstanding</div>
+  <div class="val">{{ money(total) }}</div>
+  <div class="muted">{{ dues|length }} bill(s)</div>
+</div>
+
+<form class="search" method="get" action="/dues">
+  <input name="q" value="{{ q }}" placeholder="Search bill or customer" autocomplete="off">
+  <select name="customer_id" onchange="this.form.submit()" style="margin-top:8px">
+    <option value="0">All customers</option>
+    {% for c in customers %}
+    <option value="{{ c['id'] }}" {{ 'selected' if customer_id==c['id'] }}>{{ c['name'] }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+{% if dues %}
+<div class="list">
+  {% for d in dues %}
+  <div class="row">
+    <div class="avatar">{{ (d['customer_name'] or '?')[0]|upper }}</div>
+    <div class="grow">
+      <div class="t">{{ d['customer_name'] }}</div>
+      <div class="s">{{ d['bill_number'] }} &middot; {{ fmt_date(d['created_at']) }}</div>
+    </div>
+    <div>
+      <div class="amt" style="color:var(--danger)">{{ money(d['due_amount']) }}</div>
+      <div class="right" style="margin-top:5px">
+        <button class="chip" onclick="pay({{ d['id'] }},{{ d['due_amount']|float }},{{ d['customer_name']|tojson }})">Collect</button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}<div class="empty"><span class="ic">&#127881;</span>No pending dues!</div>{% endif %}
+
+<div class="modal hidden" id="pm">
+  <div class="box">
+    <h3 id="pm_title">Collect Payment</h3>
+    <form method="post" id="pm_form">
+      <div class="field">
+        <label id="pm_lbl">Amount (&#8377;)</label>
+        <input type="number" step="0.01" min="0.01" name="amount" id="pm_amt" inputmode="decimal" required>
+      </div>
+      <div class="chips" style="margin-bottom:12px">
+        {% for p in [25,50,75,100] %}<button type="button" class="chip" onclick="pct({{ p }})">{{ p }}%</button>{% endfor %}
+      </div>
+      <div class="field">
+        <label>Payment mode</label>
+        <select name="payment_mode">{% for m in modes %}<option>{{ m }}</option>{% endfor %}</select>
+      </div>
+      <div class="btnrow">
+        <button type="button" class="btn ghost" onclick="document.getElementById('pm').classList.add('hidden')">Cancel</button>
+        <button class="btn green">Record</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let _due = 0;
+function pay(id, due, name){
+  _due = due;
+  document.getElementById('pm').classList.remove('hidden');
+  document.getElementById('pm_form').action = '/dues/' + id + '/collect';
+  document.getElementById('pm_title').textContent = 'Collect from ' + name;
+  document.getElementById('pm_lbl').innerHTML = 'Amount (&#8377;) — due \u20B9' + due.toFixed(2);
+  const a = document.getElementById('pm_amt');
+  a.value = due.toFixed(2); a.max = due;
+}
+function pct(p){ document.getElementById('pm_amt').value = (_due * p / 100).toFixed(2); }
+</script>
+{% endblock %}

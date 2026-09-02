@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% set back = "/" %}
+{% block title %}New Bill{% endblock %}
+{% block heading %}New Bill{% endblock %}
+
+{% block content %}
+<form method="post" action="/billing" id="billform">
+
+  <!-- ---------- Customer ---------- -->
+  <div class="card">
+    <h3>Customer</h3>
+    <div class="field">
+      <select name="customer_id" id="customer_id" required>
+        <option value="">-- Select customer --</option>
+        {% for c in customers %}
+          <option value="{{ c['id'] }}" {{ 'selected' if preset_customer==c['id'] }}>
+            {{ c['name'] }}{% if c['phone'] %} — {{ c['phone'] }}{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="button" class="btn ghost sm" onclick="openQuickAdd()">+ New Customer</button>
+    <div class="field" style="margin-top:12px">
+      <label>Site address for this bill (optional)</label>
+      <textarea name="bill_address" rows="2" placeholder="Leave blank to use the customer's saved address"></textarea>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <label>Bill date (DD-MM-YYYY)</label>
+      <input type="text" name="bill_date" value="{{ today }}" inputmode="numeric" placeholder="DD-MM-YYYY">
+    </div>
+  </div>
+
+  <!-- ---------- Items ---------- -->
+  <div class="card">
+    <h3>Services / Items</h3>
+    <div id="items"></div>
+    <button type="button" class="btn ghost sm" onclick="addItem()">+ Add Item</button>
+    <label style="display:flex;align-items:center;gap:9px;margin-top:13px;font-size:13.5px;color:var(--text)">
+      <input type="checkbox" name="save_services" value="1" style="width:20px;height:20px;min-height:20px;flex:none">
+      Save new services to catalog
+    </label>
+  </div>
+
+  <!-- ---------- Charges ---------- -->
+  <div class="card">
+    <h3>Discount, GST &amp; Payment</h3>
+    <div class="grid2">
+      <div class="field">
+        <label>Discount (&#8377;)</label>
+        <input type="number" step="0.01" min="0" name="discount" id="discount" value="0" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label>GST (%)</label>
+        <input type="number" step="0.01" min="0" max="100" name="tax_percent" id="tax" value="0" inputmode="decimal">
+      </div>
+    </div>
+    <div class="chips" style="margin-bottom:12px">
+      <button type="button" class="chip" onclick="setGst(0)">No GST</button>
+      <button type="button" class="chip" onclick="setGst(5)">5%</button>
+      <button type="button" class="chip" onclick="setGst(12)">12%</button>
+      <button type="button" class="chip" onclick="setGst(18)">18%</button>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label>Advance paid (&#8377;)</label>
+        <input type="number" step="0.01" min="0" name="advance" id="advance" value="0" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label>Payment mode</label>
+        <select name="payment_mode">
+          {% for m in modes %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="chips">
+      <button type="button" class="chip" onclick="payPct(0)">No advance</button>
+      <button type="button" class="chip" onclick="payPct(50)">50%</button>
+      <button type="button" class="chip" onclick="payPct(100)">Full</button>
+    </div>
+  </div>
+
+  <!-- ---------- Live totals (mirrors desktop calc box) ---------- -->
+  <div class="totals">
+    <div class="tline"><span class="m">Subtotal</span><span id="t_sub">&#8377;0.00</span></div>
+    <div class="tline"><span class="m">Discount</span><span id="t_disc">-&#8377;0.00</span></div>
+    <div class="tline" id="cg_line"><span class="m">CGST</span><span id="t_cgst">&#8377;0.00</span></div>
+    <div class="tline" id="sg_line"><span class="m">SGST</span><span id="t_sgst">&#8377;0.00</span></div>
+    <div class="tline big"><span>TOTAL</span><span id="t_total">&#8377;0.00</span></div>
+    <div class="tline"><span class="m">Advance</span><span id="t_adv">&#8377;0.00</span></div>
+    <div class="tline"><span class="m">Balance due</span><span id="t_due" style="font-weight:800">&#8377;0.00</span></div>
+    <div style="margin-top:9px"><span class="badge due" id="t_status">Due</span></div>
+    <div id="warn"></div>
+  </div>
+
+  <div class="sticky-actions">
+    <button type="submit" class="btn green" id="submitBtn">&#10003; Generate Bill &amp; PDF</button>
+  </div>
+</form>
+
+<!-- Quick-add customer modal -->
+<div class="modal hidden" id="qa">
+  <div class="box">
+    <h3>New Customer</h3>
+    <div id="qa_err"></div>
+    <div class="field"><label>Name *</label><input id="qa_name" autocomplete="name"></div>
+    <div class="field"><label>Phone (10 digits) *</label>
+      <input id="qa_phone" type="tel" inputmode="numeric" maxlength="10" autocomplete="tel"></div>
+    <div class="field"><label>Address</label><textarea id="qa_addr" rows="2"></textarea></div>
+    <div class="btnrow">
+      <button class="btn ghost" onclick="closeQuickAdd()">Cancel</button>
+      <button class="btn" onclick="saveQuickAdd()">Save</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Service catalog for autocomplete + default price fill (same data as desktop)
+const SERVICES = [
+  {% for s in services %}{name:{{ s['service_name']|tojson }}, price:{{ s['default_price']|float }}},{% endfor %}
+];
+const money = n => '\u20B9' + (Math.round(n*100)/100).toFixed(2);
+let n = 0;
+
+function addItem(name='', qty=1, rate=''){
+  n++;
+  const d = document.createElement('div');
+  d.className = 'item';
+  d.innerHTML = `
+    <div class="top">
+      <span class="sr"></span>
+      <div class="sugbox grow">
+        <input class="sname" name="service_name" placeholder="Service name" autocomplete="off" value="${name}">
+      </div>
+      <button type="button" class="del" onclick="this.closest('.item').remove();renumber();calc()">&#10005;</button>
+    </div>
+    <div class="grid2">
+      <div><label>Qty</label><input class="qty" name="qty" type="number" step="0.01" min="0.01" value="${qty}" inputmode="decimal"></div>
+      <div><label>Rate (&#8377;)</label><input class="rate" name="rate" type="number" step="0.01" min="0" value="${rate}" inputmode="decimal"></div>
+    </div>
+    <div class="amt">&#8377;0.00</div>`;
+  document.getElementById('items').appendChild(d);
+
+  const sn = d.querySelector('.sname');
+  sn.addEventListener('input', () => suggest(sn));
+  sn.addEventListener('blur', () => setTimeout(() => hideSugs(sn), 180));
+  d.querySelectorAll('.qty,.rate').forEach(i => i.addEventListener('input', calc));
+  renumber(); calc();
+}
+
+function renumber(){
+  document.querySelectorAll('#items .item').forEach((el,i) => {
+    el.querySelector('.sr').textContent = i+1;
+  });
+}
+
+/* Autocomplete: filter catalog, fill default price on pick (desktop parity) */
+function suggest(input){
+  hideSugs(input);
+  const q = input.value.trim().toLowerCase();
+  if(!q) return;
+  const hits = SERVICES.filter(s => s.name.toLowerCase().includes(q)).slice(0,6);
+  if(!hits.length) return;
+  const box = document.createElement('div');
+  box.className = 'sugs';
+  hits.forEach(s => {
+    const o = document.createElement('div');
+    o.textContent = s.name + '  \u2014  \u20B9' + s.price.toFixed(2);
+    o.onmousedown = o.ontouchstart = ev => {
+      ev.preventDefault();
+      input.value = s.name;
+      const item = input.closest('.item');
+      const rate = item.querySelector('.rate');
+      if(!rate.value || parseFloat(rate.value) === 0) rate.value = s.price;
+      hideSugs(input); calc();
+    };
+    box.appendChild(o);
+  });
+  input.parentElement.appendChild(box);
+}
+function hideSugs(input){
+  const b = input.parentElement.querySelector('.sugs');
+  if(b) b.remove();
+}
+
+function setGst(v){ document.getElementById('tax').value = v; calc(); }
+function payPct(p){
+  const t = window._total || 0;
+  document.getElementById('advance').value = (t * p / 100).toFixed(2);
+  calc();
+}
+
+/* Live recalculation — mirrors bills_repo.create_bill exactly.
+   The server recomputes and is authoritative; this is only for instant feedback. */
+function calc(){
+  let sub = 0;
+  document.querySelectorAll('#items .item').forEach(el => {
+    const q = parseFloat(el.querySelector('.qty').value) || 0;
+    const r = parseFloat(el.querySelector('.rate').value) || 0;
+    const a = q * r;
+    sub += a;
+    el.querySelector('.amt').textContent = money(a);
+  });
+
+  const disc = parseFloat(document.getElementById('discount').value) || 0;
+  const gst  = parseFloat(document.getElementById('tax').value) || 0;
+  const adv  = parseFloat(document.getElementById('advance').value) || 0;
+
+  const taxable = Math.max(0, sub - disc);
+  const tax     = taxable * gst / 100;
+  const total   = taxable + tax;
+  const due     = total - adv;
+  window._total = total;
+
+  document.getElementById('t_sub').textContent   = money(sub);
+  document.getElementById('t_disc').textContent  = '-' + money(disc);
+  document.getElementById('t_cgst').textContent  = money(tax/2);
+  document.getElementById('t_sgst').textContent  = money(tax/2);
+  document.getElementById('t_total').textContent = money(total);
+  document.getElementById('t_adv').textContent   = money(adv);
+  document.getElementById('t_due').textContent   = money(due);
+
+  const show = gst > 0 ? 'flex' : 'none';
+  document.getElementById('cg_line').style.display = show;
+  document.getElementById('sg_line').style.display = show;
+  document.querySelector('#cg_line .m').textContent = 'CGST (' + (gst/2) + '%)';
+  document.querySelector('#sg_line .m').textContent = 'SGST (' + (gst/2) + '%)';
+
+  // Status badge — same rule as _compute_status()
+  const st = document.getElementById('t_status');
+  if(adv <= 0){ st.className='badge due'; st.textContent='Due'; }
+  else if(adv >= total && total > 0){ st.className='badge paid'; st.textContent='Paid'; }
+  else { st.className='badge partial'; st.textContent='Partial'; }
+
+  // Inline validation matching the repo's ValueErrors
+  const w = [];
+  const dEl = document.getElementById('discount'), aEl = document.getElementById('advance');
+  dEl.classList.toggle('err', disc > sub);
+  aEl.classList.toggle('err', adv > total + 0.001);
+  if(disc > sub)             w.push('Discount cannot exceed subtotal.');
+  if(adv > total + 0.001)    w.push('Advance cannot exceed total.');
+  if(gst > 100)              w.push('GST cannot exceed 100%.');
+  document.getElementById('warn').innerHTML =
+    w.length ? '<div class="alert e" style="margin:10px 0 0">' + w.join('<br>') + '</div>' : '';
+  document.getElementById('submitBtn').disabled = w.length > 0;
+  document.getElementById('submitBtn').style.opacity = w.length ? .5 : 1;
+}
+
+['discount','tax','advance'].forEach(id =>
+  document.getElementById(id).addEventListener('input', calc));
+
+/* Quick add customer */
+function openQuickAdd(){ document.getElementById('qa').classList.remove('hidden'); }
+function closeQuickAdd(){ document.getElementById('qa').classList.add('hidden'); document.getElementById('qa_err').innerHTML=''; }
+async function saveQuickAdd(){
+  const fd = new FormData();
+  fd.append('name',  document.getElementById('qa_name').value);
+  fd.append('phone', document.getElementById('qa_phone').value);
+  fd.append('address', document.getElementById('qa_addr').value);
+  const r = await fetch('/api/customers', {method:'POST', body:fd});
+  const j = await r.json();
+  if(!j.ok){ document.getElementById('qa_err').innerHTML = '<div class="alert e">'+j.error+'</div>'; return; }
+  const sel = document.getElementById('customer_id');
+  const o = new Option(j.name + ' \u2014 ' + j.phone, j.id, true, true);
+  sel.add(o);
+  closeQuickAdd();
+  document.getElementById('qa_name').value = document.getElementById('qa_phone').value = document.getElementById('qa_addr').value = '';
+}
+
+addItem();  // start with one blank row, like the desktop page
+</script>
+{% endblock %}

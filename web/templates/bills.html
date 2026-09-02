@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Bills{% endblock %}
+{% block heading %}Bills History{% endblock %}
+{% block content %}
+{% if created %}<div class="alert s">&#10003; Bill {{ created }} created &amp; PDF generated.</div>{% endif %}
+<form class="search" method="get" action="/bills">
+  <input name="q" value="{{ q }}" placeholder="Search bill no, name or phone" autocomplete="off">
+</form>
+{% if bills %}
+<div class="list">
+  {% for b in bills %}
+  <a href="/bills/{{ b['id'] }}" class="row" style="color:inherit">
+    <div class="avatar">{{ (b['customer_name'] or '?')[0]|upper }}</div>
+    <div class="grow">
+      <div class="t">{{ b['customer_name'] }}</div>
+      <div class="s">{{ b['bill_number'] }} &middot; {{ fmt_date(b['created_at']) }}</div>
+    </div>
+    <div>
+      <div class="amt">{{ money(b['total_amount']) }}</div>
+      <div class="right"><span class="badge {{ b['status']|lower }}">{{ b['status'] }}</span></div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}<div class="empty"><span class="ic">&#128269;</span>No bills found</div>{% endif %}
+{% endblock %}

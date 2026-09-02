@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% set back = "/bills/" ~ b.id %}
+{% block title %}Invoice {{ b.bill_number }}{% endblock %}
+{% block heading %}Invoice {{ b.bill_number }}{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:12px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+    <div style="min-width:0">
+      <div style="font-weight:800">{{ c.name }}</div>
+      <div class="muted">{{ b.bill_number }} &middot; {{ fmt_date(b.created_at) }}</div>
+    </div>
+    <div style="text-align:right;white-space:nowrap">
+      <div style="font-weight:800;color:var(--primary)">{{ money(b.total_amount) }}</div>
+      <span class="badge {{ b.status|lower }}">{{ b.status }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Primary actions come FIRST: they work on every browser, even if the
+     embedded preview below is refused by the device's PDF handler. -->
+<div class="btnrow" style="margin-bottom:10px">
+  <a class="btn" href="/bills/{{ b.id }}/pdf?download=1" style="text-decoration:none">&#11015; Download PDF</a>
+  <a class="btn ghost" href="/bills/{{ b.id }}/pdf" target="_blank" rel="noopener" style="text-decoration:none">Open in new tab</a>
+</div>
+
+<div id="pdfwrap" class="card" style="padding:0;overflow:hidden">
+  <object id="pdfobj" data="/bills/{{ b.id }}/pdf#view=FitH" type="application/pdf"
+          style="width:100%;height:72vh;display:block;border:0">
+    <!-- Shown when the browser cannot render a PDF inline (common on
+         Android Chrome and inside sandboxed iframes). -->
+    <div class="empty" style="padding:30px 18px">
+      <span class="ic">&#128196;</span>
+      <div style="font-weight:700;margin-bottom:6px">Preview not supported here</div>
+      <div class="muted" style="margin-bottom:14px">
+        This browser won't display PDFs inline. Use Download to open the invoice
+        in your phone's PDF viewer.
+      </div>
+      <a class="btn" href="/bills/{{ b.id }}/pdf?download=1" style="text-decoration:none">&#11015; Download PDF</a>
+    </div>
+  </object>
+</div>
+
+<div class="muted" style="text-align:center;margin-top:10px">
+  Saved as <strong>{{ b.bill_number }}.pdf</strong>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* Some mobile browsers render an <object type="application/pdf"> as a blank
+   white box rather than falling back to the inner content. Detect a preview
+   that never painted and replace it with the download card instead of
+   leaving the user staring at an empty area. */
+(function () {
+  var wrap = document.getElementById('pdfwrap');
+  var obj  = document.getElementById('pdfobj');
+  if (!wrap || !obj) return;
+
+  setTimeout(function () {
+    var h = 0;
+    try { h = obj.getBoundingClientRect().height; } catch (e) {}
+    if (h > 40) return;   // preview rendered fine
+
+    wrap.innerHTML =
+      '<div class="empty" style="padding:30px 18px">' +
+        '<span class="ic">&#128196;</span>' +
+        '<div style="font-weight:700;margin-bottom:6px">Preview not available</div>' +
+        '<div class="muted" style="margin-bottom:14px">Tap below to open the invoice ' +
+        'in your phone\'s PDF viewer.</div>' +
+        '<a class="btn" style="text-decoration:none" href="/bills/{{ b.id }}/pdf?download=1">' +
+        '&#11015; Download PDF</a>' +
+      '</div>';
+  }, 1200);
+})();
+</script>
+{% endblock %}
