@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block heading %}{{ biz.name }}{% endblock %}
-{% block appbar_action %}<a class="act" href="/logout">Logout</a>{% endblock %}
+{% block appbar_action %}{% if not DISABLE_AUTH %}<a class="act" href="/logout">Logout</a>{% endif %}{% endblock %}
 {% block content %}
 <div class="stats">
   <div class="stat g"><div class="lbl">Today's Collection</div><div class="val">{{ money(stats.today_earnings) }}</div></div>

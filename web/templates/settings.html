@@ -16,6 +16,7 @@
   </form>
 </div>
 
+{% if not DISABLE_AUTH %}
 <div class="card">
   <h3>Change Password</h3>
   <form method="post" action="/settings/password">
@@ -24,6 +25,7 @@
     <button class="btn">Update Password</button>
   </form>
 </div>
+{% endif %}
 
 <div class="card">
   <h3>Backup</h3>

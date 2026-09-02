@@ -36,6 +36,30 @@ existing desktop password — it's the same `Users` table).
 ### Add to home screen
 In Chrome/Safari choose **Add to Home Screen** to get a full-screen, app-like icon.
 
+## Testing mode (login disabled)
+
+The app currently starts with **authentication turned off** so it can be opened
+and clicked through without credentials:
+
+```bash
+LAXMI_DISABLE_AUTH=1 python run_web.py    # no login (current default)
+LAXMI_DISABLE_AUTH=0 python run_web.py    # login screen back on
+```
+
+With auth off, `/login` and `/logout` redirect straight to the dashboard and the
+Logout / Change Password controls are hidden. **Do not expose a public URL in
+this mode** — anyone who can reach it has full access.
+
+The admin password (used when auth is on) is currently `aditya`, stored bcrypt
+hashed in the same `Users` table the desktop app reads.
+
+### Cookie note for embedded previews
+
+Session cookies default to `SameSite=None; Secure` (`LAXMI_CROSS_SITE=1`) so
+they survive being embedded in a cross-site HTTPS iframe. On a plain-HTTP LAN
+set `LAXMI_CROSS_SITE=0`, otherwise the browser will refuse to store the
+`Secure` cookie and login will appear to fail by bouncing back to the login page.
+
 ## Screens
 
 - **Home** — today's collection, month revenue, pending dues, customers, recent bills

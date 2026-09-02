@@ -52,7 +52,35 @@ from utils.whatsapp_share import get_whatsapp_preview_url
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 app = FastAPI(title="Laxmi Electricals Billing — Mobile")
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("LAXMI_SECRET", "laxmi-electricals-dev-secret"), max_age=60 * 60 * 12)
+
+# ---------------------------------------------------------------------------
+# TESTING MODE
+# ---------------------------------------------------------------------------
+# When DISABLE_AUTH is on, the login screen is bypassed entirely so the app can
+# be opened and clicked through without credentials.
+#
+#   Testing (default here):  LAXMI_DISABLE_AUTH=1
+#   Production:              LAXMI_DISABLE_AUTH=0   (re-enables the login page)
+#
+# !! Never ship to a public URL with this enabled — it leaves the app open. !!
+DISABLE_AUTH = os.getenv("LAXMI_DISABLE_AUTH", "1") not in ("0", "false", "False", "")
+
+# Session cookie must be SameSite=None + Secure to survive being embedded in a
+# cross-site HTTPS iframe (e.g. the Arena preview). With the default 'lax' the
+# browser silently drops the cookie, so login appears to "fail" by bouncing
+# straight back to the login page. Over plain HTTP on a LAN we keep 'lax',
+# because Secure cookies are not stored on non-HTTPS origins.
+_CROSS_SITE = os.getenv("LAXMI_CROSS_SITE", "1") not in ("0", "false", "False", "")
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("LAXMI_SECRET", "laxmi-electricals-dev-secret"),
+    max_age=60 * 60 * 12,
+    same_site="none" if _CROSS_SITE else "lax",
+    https_only=_CROSS_SITE,
+)
+
+if DISABLE_AUTH:
+    logging.warning("AUTH DISABLED (LAXMI_DISABLE_AUTH=1) — login bypassed for testing.")
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE, "static")), name="static")
@@ -61,6 +89,7 @@ templates = Jinja2Templates(directory=os.path.join(BASE, "templates"))
 templates.env.globals["money"] = format_currency
 templates.env.globals["fmt_date"] = fmt_date
 templates.env.globals["APP_VERSION"] = config.APP_VERSION
+templates.env.globals["DISABLE_AUTH"] = DISABLE_AUTH
 
 init_db()
 
@@ -69,11 +98,15 @@ PAYMENT_MODES = ("Cash", "UPI", "Bank Transfer")
 
 # ---------------------------------------------------------------- helpers ---
 def logged_in(request: Request) -> bool:
+    if DISABLE_AUTH:
+        return True
     return bool(request.session.get("auth"))
 
 
 def guard(request: Request):
     """Raise a redirect-to-login for unauthenticated page requests."""
+    if DISABLE_AUTH:
+        return
     if not logged_in(request):
         raise HTTPException(status_code=307, headers={"Location": "/login"})
 
@@ -100,13 +133,15 @@ async def http_exc(request: Request, exc: HTTPException):
 # ------------------------------------------------------------------ auth ----
 @app.get("/login", response_class=HTMLResponse)
 def login_form(request: Request):
-    if logged_in(request):
+    if DISABLE_AUTH or logged_in(request):
         return RedirectResponse("/", status_code=303)
     return page(request, "login.html", first_run=not auth.has_admin_password(), error=None)
 
 
 @app.post("/login")
 def login_submit(request: Request, password: str = Form(...), confirm: str = Form("")):
+    if DISABLE_AUTH:
+        return RedirectResponse("/", status_code=303)
     first = not auth.has_admin_password()
     try:
         if first:
@@ -126,6 +161,8 @@ def login_submit(request: Request, password: str = Form(...), confirm: str = For
 
 @app.get("/logout")
 def logout(request: Request):
+    if DISABLE_AUTH:
+        return RedirectResponse("/", status_code=303)
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
 

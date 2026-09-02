@@ -12,7 +12,11 @@
   <a href="/settings" class="row" style="color:inherit"><div class="avatar">&#9881;</div>
     <div class="grow"><div class="t">Settings</div><div class="s">Business profile, backup, password</div></div><div>&rsaquo;</div></a>
 </div>
+{% if DISABLE_AUTH %}
+<div class="alert i">&#128275; Testing mode &mdash; login is disabled.</div>
+{% else %}
 <a href="/logout" class="btn red" style="text-decoration:none">Logout</a>
+{% endif %}
 <div class="muted" style="text-align:center;margin-top:18px">
   {{ biz.name }}<br>v{{ APP_VERSION }} &middot; Mobile Edition
 </div>
