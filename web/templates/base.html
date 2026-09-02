@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+<meta name="theme-color" content="#1D4ED8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>{% block title %}Laxmi Electricals{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css?v={{ APP_VERSION }}">
+</head>
+<body>
+
+<div class="appbar">
+  {% block appbar %}
+    {% if back %}<a class="back" href="{{ back }}">&#8592;</a>{% endif %}
+    <h1>{% block heading %}Laxmi Electricals{% endblock %}</h1>
+    {% block appbar_action %}{% endblock %}
+  {% endblock %}
+</div>
+
+<div class="wrap">
+  {% if error %}<div class="alert e">{{ error }}</div>{% endif %}
+  {% block content %}{% endblock %}
+</div>
+
+{% if active %}
+<nav class="tabbar">
+  <a href="/"          class="{{ 'on' if active=='home'  }}"><span class="ic">&#127968;</span>Home</a>
+  <a href="/bills"     class="{{ 'on' if active=='bills' }}"><span class="ic">&#128220;</span>Bills</a>
+  <a href="/billing"   class="fab"><span class="ic">+</span>New Bill</a>
+  <a href="/dues"      class="{{ 'on' if active=='dues'  }}"><span class="ic">&#8986;</span>Dues</a>
+  <a href="/more"      class="{{ 'on' if active=='more'  }}"><span class="ic">&#9776;</span>More</a>
+</nav>
+{% endif %}
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

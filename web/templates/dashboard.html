@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block heading %}{{ biz.name }}{% endblock %}
+{% block appbar_action %}<a class="act" href="/logout">Logout</a>{% endblock %}
+{% block content %}
+<div class="stats">
+  <div class="stat g"><div class="lbl">Today's Collection</div><div class="val">{{ money(stats.today_earnings) }}</div></div>
+  <div class="stat b"><div class="lbl">This Month</div><div class="val">{{ money(stats.month_earnings) }}</div></div>
+  <div class="stat r"><div class="lbl">Pending Dues</div><div class="val">{{ money(stats.pending_dues) }}</div>
+    <div class="muted">{{ stats.pending_count }} bill(s)</div></div>
+  <div class="stat o"><div class="lbl">Customers</div><div class="val">{{ stats.total_customers }}</div>
+    <div class="muted">{{ stats.total_bills }} bills</div></div>
+</div>
+
+{% if stats.pending_dues and stats.pending_dues > 0 %}
+<a href="/dues"><div class="alert e">&#9888; {{ money(stats.pending_dues) }} pending across {{ stats.pending_count }} bill(s) &rsaquo;</div></a>
+{% endif %}
+
+<div class="btnrow" style="margin-bottom:12px">
+  <a href="/billing" class="btn green" style="text-decoration:none">+ New Bill</a>
+  <a href="/customers" class="btn ghost" style="text-decoration:none">Customers</a>
+</div>
+
+<div class="card">
+  <h3>Recent Bills</h3>
+  {% if recent %}
+  <div class="list" style="box-shadow:none;margin:-14px;margin-top:0">
+    {% for b in recent %}
+    <a href="/bills/{{ b['id'] }}" class="row" style="color:inherit">
+      <div class="avatar">{{ (b['customer_name'] or '?')[0]|upper }}</div>
+      <div class="grow">
+        <div class="t">{{ b['customer_name'] }}</div>
+        <div class="s">{{ b['bill_number'] }} &middot; {{ fmt_date(b['created_at']) }}</div>
+      </div>
+      <div>
+        <div class="amt">{{ money(b['total_amount']) }}</div>
+        <div class="right"><span class="badge {{ b['status']|lower }}">{{ b['status'] }}</span></div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}<div class="empty"><span class="ic">&#128220;</span>No bills yet</div>{% endif %}
+</div>
+{% endblock %}

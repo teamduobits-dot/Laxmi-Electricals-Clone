@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% set back = "/bills" %}
+{% block title %}{{ b.bill_number }}{% endblock %}
+{% block heading %}Bill {{ b.bill_number }}{% endblock %}
+{% block content %}
+{% if request.query_params.get('paid') %}<div class="alert s">&#10003; Payment recorded &amp; PDF updated.</div>{% endif %}
+{% if request.query_params.get('err') %}<div class="alert e">{{ request.query_params.get('err') }}</div>{% endif %}
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div style="font-weight:800;font-size:17px">{{ c.name }}</div>
+      <div class="muted">{{ c.phone }}</div>
+      <div class="muted">{{ b.bill_address or c.address or '' }}</div>
+    </div>
+    <span class="badge {{ b.status|lower }}">{{ b.status }}</span>
+  </div>
+  <div class="muted" style="margin-top:8px">{{ fmt_date(b.created_at) }} &middot; {{ b.payment_mode }}</div>
+</div>
+
+<div class="card">
+  <h3>Items</h3>
+  {% for it in items %}
+  <div class="row" style="padding:9px 0">
+    <div class="grow"><div class="t">{{ it.service_name }}</div>
+      <div class="s">{{ it.qty }} &times; {{ money(it.rate) }}</div></div>
+    <div class="amt">{{ money(it.amount) }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="totals">
+  <div class="tline"><span class="m">Subtotal</span><span>{{ money(b.subtotal) }}</span></div>
+  {% if b.discount_amount %}<div class="tline"><span class="m">Discount</span><span>-{{ money(b.discount_amount) }}</span></div>{% endif %}
+  {% if b.tax_amount %}
+    <div class="tline"><span class="m">CGST ({{ (b.tax_percent or 0)/2 }}%)</span><span>{{ money(b.tax_amount/2) }}</span></div>
+    <div class="tline"><span class="m">SGST ({{ (b.tax_percent or 0)/2 }}%)</span><span>{{ money(b.tax_amount/2) }}</span></div>
+  {% endif %}
+  <div class="tline big"><span>TOTAL</span><span>{{ money(b.total_amount) }}</span></div>
+  <div class="tline"><span class="m">Advance paid</span><span>{{ money(b.advance_paid) }}</span></div>
+  <div class="tline"><span class="m">Balance due</span><span style="font-weight:800">{{ money(b.due_amount) }}</span></div>
+</div>
+
+<div class="btnrow" style="margin-bottom:10px">
+  <a class="btn" href="/bills/{{ b.id }}/pdf" target="_blank" style="text-decoration:none">&#128196; View PDF</a>
+  <a class="btn green" href="{{ wa }}" target="_blank" rel="noopener" style="text-decoration:none">WhatsApp</a>
+</div>
+<div class="btnrow" style="margin-bottom:10px">
+  <a class="btn ghost" href="/bills/{{ b.id }}/pdf?download=1" style="text-decoration:none">Download</a>
+  <a class="btn ghost" href="/bills/{{ b.id }}/edit" style="text-decoration:none">Edit</a>
+</div>
+
+{% if b.due_amount and b.due_amount > 0 %}
+<div class="card">
+  <h3>Collect Payment</h3>
+  <form method="post" action="/bills/{{ b.id }}/pay">
+    <div class="field">
+      <label>Amount (&#8377;) &mdash; due {{ money(b.due_amount) }}</label>
+      <input type="number" step="0.01" min="0.01" max="{{ b.due_amount }}" name="amount" id="pa" value="{{ '%.2f'|format(b.due_amount) }}" inputmode="decimal" required>
+    </div>
+    <div class="chips" style="margin-bottom:12px">
+      {% for p in [25,50,75,100] %}
+      <button type="button" class="chip" onclick="document.getElementById('pa').value=({{ b.due_amount }}*{{ p }}/100).toFixed(2)">{{ p }}%</button>
+      {% endfor %}
+    </div>
+    <div class="field">
+      <label>Payment mode</label>
+      <select name="payment_mode">{% for m in modes %}<option>{{ m }}</option>{% endfor %}</select>
+    </div>
+    <button class="btn green">Record Payment</button>
+  </form>
+</div>
+{% endif %}
+
+<form method="post" action="/bills/{{ b.id }}/delete" onsubmit="return confirm('Delete bill {{ b.bill_number }} and its PDF? This cannot be undone.')">
+  <button class="btn red">Delete Bill</button>
+</form>
+{% endblock %}

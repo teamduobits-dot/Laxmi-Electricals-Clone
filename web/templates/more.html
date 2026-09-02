@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}More{% endblock %}
+{% block heading %}More{% endblock %}
+{% block content %}
+<div class="list" style="margin-bottom:12px">
+  <a href="/customers" class="row" style="color:inherit"><div class="avatar">&#128100;</div>
+    <div class="grow"><div class="t">Customers</div><div class="s">Add, edit and view customers</div></div><div>&rsaquo;</div></a>
+  <a href="/services" class="row" style="color:inherit"><div class="avatar">&#128295;</div>
+    <div class="grow"><div class="t">Services</div><div class="s">Service catalog &amp; default prices</div></div><div>&rsaquo;</div></a>
+  <a href="/reports" class="row" style="color:inherit"><div class="avatar">&#128202;</div>
+    <div class="grow"><div class="t">Reports</div><div class="s">Daily &amp; monthly summaries, CSV</div></div><div>&rsaquo;</div></a>
+  <a href="/settings" class="row" style="color:inherit"><div class="avatar">&#9881;</div>
+    <div class="grow"><div class="t">Settings</div><div class="s">Business profile, backup, password</div></div><div>&rsaquo;</div></a>
+</div>
+<a href="/logout" class="btn red" style="text-decoration:none">Logout</a>
+<div class="muted" style="text-align:center;margin-top:18px">
+  {{ biz.name }}<br>v{{ APP_VERSION }} &middot; Mobile Edition
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% set back = "/more" %}
+{% block title %}Reports{% endblock %}
+{% block heading %}Reports{% endblock %}
+{% block content %}
+<div class="btnrow" style="margin-bottom:12px">
+  <a class="btn {{ '' if mode=='daily' else 'ghost' }}" href="/reports?mode=daily" style="text-decoration:none">Daily</a>
+  <a class="btn {{ '' if mode=='monthly' else 'ghost' }}" href="/reports?mode=monthly" style="text-decoration:none">Monthly</a>
+</div>
+
+<div class="card">
+  <form method="get" action="/reports">
+    <input type="hidden" name="mode" value="{{ mode }}">
+    {% if mode == 'daily' %}
+      <div class="field"><label>Date</label><input type="date" name="date" value="{{ date }}" onchange="this.form.submit()"></div>
+    {% else %}
+      <div class="grid2">
+        <div class="field"><label>Year</label>
+          <select name="year" onchange="this.form.submit()">
+            {% for y in years %}<option value="{{ y }}" {{ 'selected' if y==year }}>{{ y }}</option>{% endfor %}
+          </select></div>
+        <div class="field"><label>Month</label>
+          <select name="month" onchange="this.form.submit()">
+            {% for m in range(1,13) %}<option value="{{ m }}" {{ 'selected' if m==month }}>{{ '%02d'|format(m) }}</option>{% endfor %}
+          </select></div>
+      </div>
+    {% endif %}
+  </form>
+</div>
+
+<div class="stats">
+  <div class="stat b"><div class="lbl">Total Billed</div><div class="val">{{ money(summary.total or 0) }}</div></div>
+  <div class="stat g"><div class="lbl">Received</div><div class="val">{{ money(summary.received or 0) }}</div></div>
+  <div class="stat r"><div class="lbl">Due</div><div class="val">{{ money(summary.due or 0) }}</div></div>
+  <div class="stat o"><div class="lbl">Bills</div><div class="val">{{ summary.bill_count or 0 }}</div></div>
+</div>
+
+<a class="btn ghost" style="text-decoration:none;margin-bottom:12px"
+   href="/reports/export?mode={{ mode }}&date={{ date }}&year={{ year }}&month={{ month }}">&#11015; Export CSV</a>
+
+{% if rows %}
+<div class="list">
+  {% for r in rows %}
+  <a href="/bills/{{ r['id'] }}" class="row" style="color:inherit">
+    <div class="grow"><div class="t">{{ r['customer_name'] }}</div>
+      <div class="s">{{ r['bill_number'] }} &middot; {{ fmt_date(r['created_at']) }}</div></div>
+    <div><div class="amt">{{ money(r['total_amount']) }}</div>
+      <div class="right"><span class="badge {{ r['status']|lower }}">{{ r['status'] }}</span></div></div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}<div class="empty"><span class="ic">&#128202;</span>No bills in this period</div>{% endif %}
+{% endblock %}

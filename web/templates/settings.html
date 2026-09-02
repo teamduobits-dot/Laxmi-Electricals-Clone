@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% set back = "/more" %}
+{% block title %}Settings{% endblock %}
+{% block heading %}Settings{% endblock %}
+{% block content %}
+{% if saved %}<div class="alert s">&#10003; {{ saved }}</div>{% endif %}
+{% if error %}<div class="alert e">{{ error }}</div>{% endif %}
+
+<div class="card">
+  <h3>Business Profile</h3>
+  <form method="post" action="/settings/business">
+    <div class="field"><label>Business name</label><input name="name" value="{{ biz.name }}"></div>
+    <div class="field"><label>Phone</label><input name="phone" value="{{ biz.phone }}" inputmode="numeric"></div>
+    <div class="field"><label>Address (printed on invoice)</label><textarea name="address" rows="3">{{ biz.address }}</textarea></div>
+    <button class="btn">Save Profile</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>Change Password</h3>
+  <form method="post" action="/settings/password">
+    <div class="field"><label>Current password</label><input type="password" name="current" required autocomplete="current-password"></div>
+    <div class="field"><label>New password (min 4 chars)</label><input type="password" name="new" required autocomplete="new-password"></div>
+    <button class="btn">Update Password</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3>Backup</h3>
+  <p class="muted" style="margin-top:0">Creates a safe copy of the database using SQLite's backup API.</p>
+  <form method="post" action="/settings/backup"><button class="btn ghost">Create Backup Now</button></form>
+</div>
+
+<div class="card">
+  <h3>About</h3>
+  <div class="muted" style="word-break:break-all;line-height:1.7">
+    Version {{ info.version }}<br>
+    Database: {{ info.db_path }}<br>
+    Bills folder: {{ info.bills_dir }}<br>
+    Backups: {{ info.backup_dir }}
+  </div>
+</div>
+{% endblock %}

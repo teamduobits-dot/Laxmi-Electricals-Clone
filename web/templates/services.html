@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% set back = "/more" %}
+{% block title %}Services{% endblock %}
+{% block heading %}Services{% endblock %}
+{% block appbar_action %}<a class="act" href="#" onclick="openForm();return false">+ Add</a>{% endblock %}
+{% block content %}
+<form class="search" method="get" action="/services">
+  <input name="q" value="{{ q }}" placeholder="Search services" autocomplete="off">
+</form>
+{% if services %}
+<div class="list">
+  {% for s in services %}
+  <div class="row" onclick="openForm({{ s['id'] }},{{ s['service_name']|tojson }},{{ s['default_price']|float }})">
+    <div class="avatar">&#128295;</div>
+    <div class="grow"><div class="t">{{ s['service_name'] }}</div>
+      <div class="s">used {{ s['usage_count'] }} time(s)</div></div>
+    <div class="amt">{{ money(s['default_price']) }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}<div class="empty"><span class="ic">&#128295;</span>No services yet</div>{% endif %}
+
+<div class="modal hidden" id="sf">
+  <div class="box">
+    <h3 id="sf_title">New Service</h3>
+    <form method="post" action="/services">
+      <input type="hidden" name="id" id="sf_id">
+      <div class="field"><label>Service name *</label><input name="service_name" id="sf_name" required></div>
+      <div class="field"><label>Default price (&#8377;)</label>
+        <input name="default_price" id="sf_price" type="number" step="0.01" min="0" value="0" inputmode="decimal"></div>
+      <div class="btnrow">
+        <button type="button" class="btn ghost" onclick="closeForm()">Cancel</button>
+        <button class="btn">Save</button>
+      </div>
+    </form>
+    <form method="post" id="sf_del" style="margin-top:9px" onsubmit="return confirm('Delete this service?')">
+      <button class="btn red">Delete</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function openForm(id,name,price){
+  document.getElementById('sf').classList.remove('hidden');
+  document.getElementById('sf_title').textContent = id ? 'Edit Service' : 'New Service';
+  document.getElementById('sf_id').value = id || '';
+  document.getElementById('sf_name').value = name || '';
+  document.getElementById('sf_price').value = price !== undefined ? price : 0;
+  const del=document.getElementById('sf_del');
+  if(id){ del.action='/services/'+id+'/delete'; del.classList.remove('hidden'); } else { del.classList.add('hidden'); }
+}
+function closeForm(){ document.getElementById('sf').classList.add('hidden'); }
+</script>
+{% endblock %}
