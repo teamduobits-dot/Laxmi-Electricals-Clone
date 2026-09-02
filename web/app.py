@@ -236,7 +236,7 @@ async def billing_submit(request: Request):
                     pass  # already exists — same non-fatal behaviour as desktop
 
         generate_invoice_pdf(bill_id)
-        return RedirectResponse(f"/bills?created={bill_number}", status_code=303)
+        return RedirectResponse(f"/bills/{bill_id}?created=1", status_code=303)
 
     except ValueError as e:
         return page(request, "billing.html", active="new",
@@ -257,7 +257,10 @@ def bills_list(request: Request, q: str = "", created: str = ""):
 @app.get("/bills/{bill_id}", response_class=HTMLResponse)
 def bill_detail(request: Request, bill_id: int):
     guard(request)
-    b = bills_repo.get_bill_bundle(bill_id)
+    try:
+        b = bills_repo.get_bill_bundle(bill_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Bill not found.")
     cust = b["customer"] or {}
     msg = (f"Hello {cust.get('name','')}, your bill {b['bill']['bill_number']} "
            f"from {biz()['name']} is ready. Total: Rs.{b['bill']['total_amount']:.2f}, "
@@ -268,15 +271,65 @@ def bill_detail(request: Request, bill_id: int):
 
 @app.get("/bills/{bill_id}/pdf")
 def bill_pdf(request: Request, bill_id: int, download: int = 0):
+    """
+    Serve the invoice PDF.
+
+    Notes on the headers below — these matter for mobile browsers:
+      * `inline` lets the browser render it; `attachment` forces a save.
+      * `X-Frame-Options: SAMEORIGIN` is NOT set, and CSP frame-ancestors is
+        left open, so the PDF can be shown inside our own viewer <iframe>
+        even when the whole app is itself embedded in a cross-site iframe.
+      * `Accept-Ranges` lets mobile PDF viewers fetch byte ranges instead of
+        refusing to render.
+    """
     guard(request)
-    b = bills_repo.get_bill_bundle(bill_id)
+    try:
+        b = bills_repo.get_bill_bundle(bill_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Bill not found.")
+
     number = b["bill"]["bill_number"]
     path = best_pdf_path_for_bill_number(number)
+    if not path or not os.path.exists(path) or os.path.getsize(path) == 0:
+        # regenerate-if-missing (or if a previous run left a 0-byte file)
+        path = generate_invoice_pdf(bill_id)
+
     if not path or not os.path.exists(path):
-        path = generate_invoice_pdf(bill_id)  # regenerate-if-missing, same as desktop
-    return FileResponse(path, media_type="application/pdf",
-                        filename=f"{number}.pdf" if download else None,
-                        headers={} if download else {"Content-Disposition": f'inline; filename="{number}.pdf"'})
+        raise HTTPException(status_code=500, detail="Invoice PDF could not be generated.")
+
+    disp = "attachment" if download else "inline"
+    return FileResponse(
+        path,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'{disp}; filename="{number}.pdf"',
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@app.get("/bills/{bill_id}/invoice", response_class=HTMLResponse)
+def bill_invoice_view(request: Request, bill_id: int):
+    """
+    A viewer page for the invoice.
+
+    Why this exists: `target="_blank"` links are frequently blocked when the
+    app runs inside a sandboxed iframe, and many mobile browsers refuse to
+    render `application/pdf` inline at all — both look to the user like
+    "the PDF doesn't open". This page always renders *something*: an embedded
+    preview where supported, plus explicit Download / Open-in-new-tab buttons
+    that work everywhere.
+    """
+    guard(request)
+    try:
+        b = bills_repo.get_bill_bundle(bill_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Bill not found.")
+    return page(request, "invoice_view.html", active="bills",
+                b=b["bill"], c=b["customer"] or {})
+
 
 
 @app.post("/bills/{bill_id}/pay")
@@ -293,8 +346,10 @@ def bill_pay(request: Request, bill_id: int, amount: float = Form(...), payment_
 @app.post("/bills/{bill_id}/delete")
 def bill_delete(request: Request, bill_id: int):
     guard(request)
-    b = bills_repo.get_bill_bundle(bill_id)
-    number = b["bill"]["bill_number"]
+    try:
+        number = bills_repo.get_bill_bundle(bill_id)["bill"]["bill_number"]
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Bill not found.")
     bills_manage_repo.delete_bill(bill_id)
     delete_pdf_files_for_bill_number(number)  # remove PDFs too, same as desktop
     return RedirectResponse("/bills", status_code=303)
@@ -303,7 +358,10 @@ def bill_delete(request: Request, bill_id: int):
 @app.get("/bills/{bill_id}/edit", response_class=HTMLResponse)
 def bill_edit_form(request: Request, bill_id: int):
     guard(request)
-    b = bills_repo.get_bill_bundle(bill_id)
+    try:
+        b = bills_repo.get_bill_bundle(bill_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Bill not found.")
     return page(request, "bill_edit.html", active="bills", b=b["bill"], items=b["items"],
                 customers=lookups_repo.list_customers(), services=lookups_repo.list_services(),
                 modes=PAYMENT_MODES)

@@ -3,6 +3,7 @@
 {% block title %}{{ b.bill_number }}{% endblock %}
 {% block heading %}Bill {{ b.bill_number }}{% endblock %}
 {% block content %}
+{% if request.query_params.get('created') %}<div class="alert s">&#10003; Bill {{ b.bill_number }} created. PDF is ready below.</div>{% endif %}
 {% if request.query_params.get('paid') %}<div class="alert s">&#10003; Payment recorded &amp; PDF updated.</div>{% endif %}
 {% if request.query_params.get('err') %}<div class="alert e">{{ request.query_params.get('err') }}</div>{% endif %}
 
@@ -42,11 +43,11 @@
 </div>
 
 <div class="btnrow" style="margin-bottom:10px">
-  <a class="btn" href="/bills/{{ b.id }}/pdf" target="_blank" style="text-decoration:none">&#128196; View PDF</a>
+  <a class="btn" href="/bills/{{ b.id }}/invoice" style="text-decoration:none">&#128196; View PDF</a>
   <a class="btn green" href="{{ wa }}" target="_blank" rel="noopener" style="text-decoration:none">WhatsApp</a>
 </div>
 <div class="btnrow" style="margin-bottom:10px">
-  <a class="btn ghost" href="/bills/{{ b.id }}/pdf?download=1" style="text-decoration:none">Download</a>
+  <a class="btn ghost" href="/bills/{{ b.id }}/pdf?download=1" style="text-decoration:none">&#11015; Download</a>
   <a class="btn ghost" href="/bills/{{ b.id }}/edit" style="text-decoration:none">Edit</a>
 </div>
 
